@@ -3,7 +3,11 @@ module.exports = (sequelize, DataTypes) => {
   const Course = sequelize.define(
     "Course",
     {
-      title: DataTypes.STRING,
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+      },
       description: DataTypes.TEXT,
       estimatedTime: DataTypes.STRING,
       materialsNeeded: DataTypes.STRING
@@ -11,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
     {}
   );
   Course.associate = function(models) {
-    Course.belongsTo(models.User, { foreignKey: 'userId' });
+    Course.belongsTo(models.User, { foreignKey: "userId" });
   };
   return Course;
 };

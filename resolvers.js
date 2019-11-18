@@ -1,5 +1,9 @@
 const jwt = require("jsonwebtoken");
-const { AuthenticationError } = require("apollo-server");
+const {
+  AuthenticationError,
+  ForbiddenError,
+  UserInputError
+} = require("apollo-server");
 
 const resolvers = {
   Query: {
@@ -8,14 +12,28 @@ const resolvers = {
         throw new AuthenticationError("Route is protected.");
       }
 
-      return models.Course.findByPk(id);
+      return models.Course.findByPk(id, {
+        include: [
+          {
+            model: models.User,
+            attributes: { exclude: ["password"] }
+          }
+        ]
+      });
     },
     getCourses: async (root, { id }, { user, models }) => {
       if (!user) {
         throw new AuthenticationError("Route is protected.");
       }
 
-      return models.Course.findAll();
+      return models.Course.findAll({
+        include: [
+          {
+            model: models.User,
+            attributes: { exclude: ["password"] }
+          }
+        ]
+      });
     },
     getUsers: async (root, { id }, { user, models }) => {
       if (!user) {
@@ -23,7 +41,7 @@ const resolvers = {
       }
 
       return models.User.findAll({
-        attributes: ["firstName", "lastName", "emailAddress"]
+        attributes: { exclude: ["password"] }
       });
     },
     getCurrentUser: async (root, { id }, { user, models }) => {
@@ -31,8 +49,13 @@ const resolvers = {
         throw new AuthenticationError("Route is protected.");
       }
 
+      const newUser = await models.User.findByPk(user.id, {
+        include: [models.Course]
+      });
+
       return models.User.findByPk(user.id, {
-        attributes: ["firstName", "lastName", "emailAddress"]
+        include: [models.Course],
+        attributes: { exclude: ["password"] }
       });
     }
   },
@@ -66,11 +89,13 @@ const resolvers = {
         const course = await models.Course.findByPk(id);
 
         if (course.userId !== user.id) {
-          throw Error("Don't have permission to update that course.");
+          throw new ForbiddenError(
+            "Don't have permission to update that course."
+          );
         }
       } catch (error) {
         if (error.name === "SequelizeValidationError") {
-          return error;
+          return new UserInputError("Course does not exist.");
         } else {
           throw error;
         }
@@ -89,7 +114,7 @@ const resolvers = {
         course.destroy();
         return "success";
       } else {
-        return "failure";
+        return new UserInputError("Course does not exist.");
       }
     },
     register: async (
@@ -154,12 +179,12 @@ const resolvers = {
   },
   Course: {
     async author(course) {
-      return course.getUser();
+      return course.User;
     }
   },
   User: {
     async courses(user) {
-      return user.getCourses();
+      return user.Courses;
     }
   }
 };
