@@ -12,8 +12,12 @@ const typeDefs = gql`
     firstName: String
     lastName: String
     emailAddress: String
-    password: String
     courses: [Course]
+  }
+
+  type LoginResponse {
+    token: String
+    user: User
   }
 
   # The "Query" type is special: it lists all of the available queries that
@@ -22,9 +26,17 @@ const typeDefs = gql`
     getCourse(id: ID!): Course
     getCourses: [Course!]
     getUsers: [User!]
+    getCurrentUser: User
   }
 
   type Mutation {
+    register(
+      firstName: String
+      lastName: String
+      emailAddress: String!
+      password: String!
+    ): LoginResponse
+    login(emailAddress: String, password: String): LoginResponse
     createCourse(
       title: String!
       description: String

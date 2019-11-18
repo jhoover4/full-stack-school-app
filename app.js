@@ -1,11 +1,12 @@
 "use strict";
 
-// load modules
+require("dotenv").config();
 const express = require("express");
 const db = require("./models");
 const resolvers = require("./resolvers");
-const typeDefs = require('./schema');
+const typeDefs = require("./schema");
 const { ApolloServer } = require("apollo-server");
+const jwt = require("jsonwebtoken");
 
 // variable to enable global error logging
 const enableGlobalErrorLogging =
@@ -15,10 +16,27 @@ const enableGlobalErrorLogging =
 const app = express();
 const port = process.env.PORT || 5000;
 
+const getUser = token => {
+  try {
+    if (token) {
+      return jwt.verify(token, process.env.SECRET_KEY);
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+};
+
 const server = new ApolloServer({
   typeDefs,
   resolvers,
-  context: { models: db }
+  context: async ({ req }) => {
+    const tokenWithBearer = req.headers.authorization || "";
+    const token = tokenWithBearer.split(" ")[1];
+    const user = getUser(token);
+
+    return { user, models: db };
+  }
 });
 
 // setup a friendly greeting for the root route
